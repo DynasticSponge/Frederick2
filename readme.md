@@ -1,18 +1,20 @@
-# Frederick2
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/ad520bdcf77e402ca58ca18315d0b8c7)](https://www.codacy.com/manual/joseph.adomatis/Frederick2?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=DynasticSponge/Frederick2&amp;utm_campaign=Badge_Grade)
+# frederick2
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/ad520bdcf77e402ca58ca18315d0b8c7)](https://www.codacy.com/manual/joseph.adomatis/frederick2?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=DynasticSponge/frederick2&amp;utm_campaign=Badge_Grade)
 
-Frederick2 is a C++ HTTP Server library for Linux.
+frederick2 is a C++ HTTP server library for linux.
 
 ## Build
+
+Modify the makefile to address your own folder structure or ensure that "object" and "output" folders exist as peers of the "source" and "headers" folders.
 
 ```bash
 make static
 ```
-The above will compile the source and generate the libfrederick2.a static library in the output directory
+The above will compile the source and generate the libfrederick2.a static library in the "output" folder
 
 ## Installation
 
-Copy the 'headers' folder and libfrederick2.a library file to the appropriate locations with your project's folder structure and update your complier/linker appropriately
+Copy the 'headers' folder and libfrederick2.a library file to the appropriate locations within your project's folder structure and update your compiler/linker appropriately.
 
 ## Usage
 
@@ -54,7 +56,7 @@ void buildResourceTree(server::resource* treeRoot)
     httpHandler actionPostHandler{[](packet::httpRequest* request, packet::httpResponse* response){
         std::string returnContent{"<!doctype html><html><head></head><body>"};
         returnContent.append("<h1>Hello World!</h1>");
-        returnContent.append("<h3>You've executed a POST request against /action of 127.0.0.1</h3>");
+        returnContent.append("<h3>You've executed a POST request against /actions of 127.0.0.1</h3>");
         returnContent.append("</body></html>");
         response->setContent(returnContent);
         response->addHeader("Content-Type", "text/html");
@@ -70,7 +72,7 @@ void buildResourceTree(server::resource* treeRoot)
     httpHandler actionPutHandler{[](packet::httpRequest* request, packet::httpResponse* response){
         std::string returnContent{"<!doctype html><html><head></head><body>"};
         returnContent.append("<h1>Hello World!</h1>");
-        returnContent.append("<h3>You've executed a PUT request against /action of 127.0.0.1</h3>");
+        returnContent.append("<h3>You've executed a PUT request against /actions of 127.0.0.1</h3>");
         returnContent.append("</body></html>");
         response->setContent(returnContent);
         response->addHeader("Content-Type", "text/html");
