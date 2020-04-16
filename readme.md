@@ -115,6 +115,8 @@ int main(int argc, char* argv[])
 
     // Stop the server
     httpServer->stop();
+    delete treeRoot;
+    delete httpServer;
     return(0);
 }
 ```
