@@ -3,6 +3,10 @@
 
 frederick2 is a C++ HTTP server library for linux.
 
+## Stage/Release
+
+frederick2 is still in an alpha / pre-release stage of development
+
 ## Build
 
 Modify the makefile to address your own folder structure or ensure that "object" and "output" folders exist as peers of the "source" and "headers" folders.
@@ -16,7 +20,7 @@ The above will compile the source and generate the libfrederick2.a static librar
 
 Copy the 'headers' folder and libfrederick2.a library file to the appropriate locations within your project's folder structure and update your compiler/linker appropriately.
 
-## Usage
+## Basic Example
 
 ```c++
 #include <iostream>
@@ -64,7 +68,7 @@ void buildResourceTree(server::resource* treeRoot)
     }};
 
     // add the handler function to the resource for a specific HTTP method
-    // in this case we're adding the handler for POST requests against the 'actions'
+    // in this case we're adding the handler for POST requests against the 'actions' resource
     // (ie http://127.0.0.1/actions )
     rootBranchAction->addHandler(enums::httpMethod::POST, actionPostHandler);
     
@@ -80,7 +84,7 @@ void buildResourceTree(server::resource* treeRoot)
     }};
     
     // add the handler function to the resource for a specific HTTP method
-    // in this case we're adding the handler for PUT requests against the 'actions'
+    // in this case we're adding the handler for PUT requests against the 'actions' resource
     // (ie http://127.0.0.1/actions )
     rootBranchAction->addHandler(enums::httpMethod::PUT, actionPutHandler);
 
@@ -126,9 +130,11 @@ int main(int argc, char* argv[])
 
 ## Contributing
 
-This is a hobby project for me to have fun learning and tweaking.  I'm more than happy to share the results with whomever wants to make use of it.  If you are interested in contributing however, please open an issue and we can discuss what you would like to do.  
+This is a hobby project for me to have fun learning new things and tweaking the results.  If someone is interested, I'm more than happy to share the work/results with whomever wants to make use of it.
 
-Thanks
+If you are interested in contributing however, please open an issue and we can discuss what it is you would like to tackle.  
+
+Thanks!
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)

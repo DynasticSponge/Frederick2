@@ -14,7 +14,6 @@
 #include <string>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <time.h>
 #include <unistd.h>
 
 #include "../headers/frederick2_namespace.hpp"
@@ -189,11 +188,7 @@ bool server::socket::pollIn()
     bool returnValue{false};
     int pollReturn{-1};
 
-    struct timespec tv;
-    tv.tv_sec = 0;
-    tv.tv_nsec = 0;
-    
-    pollReturn = ppoll(&this->pollFD, 1, &tv, NULL);
+    pollReturn = poll(&this->pollFD, 1, 0);
 
     if (pollReturn > 0)
     {

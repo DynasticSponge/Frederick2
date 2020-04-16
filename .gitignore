@@ -5,6 +5,8 @@
 
 ### PROJECT SPECIFIC FILES ###
 main.cpp
+object/*
+output/*
 
 ### C ###
 # Prerequisites
@@ -110,7 +112,6 @@ dkms.conf
 .nfs*
 
 ### VisualStudioCode ###
-./output/*
 .vscode/*
 *.code-workspace
 
