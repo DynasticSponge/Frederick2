@@ -1,5 +1,5 @@
 # Frederick2
-![Codacy grade](https://img.shields.io/codacy/grade/ad520bdcf77e402ca58ca18315d0b8c7)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/ad520bdcf77e402ca58ca18315d0b8c7)](https://www.codacy.com/manual/joseph.adomatis/Frederick2?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=DynasticSponge/Frederick2&amp;utm_campaign=Badge_Grade)
 
 Frederick2 is a C++ HTTP Server library for Linux.
 
