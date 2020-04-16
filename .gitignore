@@ -3,6 +3,9 @@
 # Created by https://www.gitignore.io/api/visualstudiocode,linux,c,c++,git
 # Edit at https://www.gitignore.io/?templates=visualstudiocode,linux,c,c++,git
 
+### PROJECT SPECIFIC FILES ###
+main.cpp
+
 ### C ###
 # Prerequisites
 *.d

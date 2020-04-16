@@ -21,12 +21,21 @@ dcompile: ${SOURCES}
 staticlib: ${OBJECTS}
 	ar rs ${OUTPUTDIR}${APPNAME}.a ${OBJECTS}
 
+link: ${OBJECTS}
+	$(CXX) -o ${OUTPUTDIR}${APPNAME} ${OBJECTS} ${LIBRARIES} 
+	chmod 755 ${OUTPUTDIR}${APPNAME}
+
 postop:
 	rm ${OBJECTDIR}*.*
 
 clean:
 	rm ${OBJECTDIR}*.*
 	rm $(OUTPUTDIR)*.*
+
+debug:
+	$(MAKE) compile
+	$(MAKE) link
+	$(MAKE) postop
 
 static: 
 	$(MAKE) compile

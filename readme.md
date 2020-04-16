@@ -1,4 +1,5 @@
 # Frederick2
+![Codacy grade](https://img.shields.io/codacy/grade/ad520bdcf77e402ca58ca18315d0b8c7)
 
 Frederick2 is a C++ HTTP Server library for Linux.
 
@@ -22,7 +23,7 @@ Copy the 'headers' folder and libfrederick2.a library file to the appropriate lo
 #include "frederick2/http_response.hpp"
 #include "frederick2/server.hpp"
 #include "frederick2/server_enum.hpp"
-#include "frederick2/server_resource"
+#include "frederick2/server_resource.hpp"
 
 namespace enums = frederick2::httpEnums;
 namespace packet = frederick2::httpPacket;
@@ -34,7 +35,7 @@ void buildResourceTree(server::resource* treeRoot)
     httpHandler rootGetHandler{[](packet::httpRequest* request, packet::httpResponse* response){
         std::string returnContent{"<!doctype html><html><head></head><body>"};
         returnContent.append("<h1>Hello World!</h1>");
-        returnContent.append("<h3>You've executed a GET request against the root of 192.168.1.64</h3>");
+        returnContent.append("<h3>You've executed a GET request against the root of 127.0.0.1</h3>");
         returnContent.append("</body></html>");
         response->setContent(returnContent);
         response->addHeader("Content-Type", "text/html");
@@ -53,7 +54,7 @@ void buildResourceTree(server::resource* treeRoot)
     httpHandler actionPostHandler{[](packet::httpRequest* request, packet::httpResponse* response){
         std::string returnContent{"<!doctype html><html><head></head><body>"};
         returnContent.append("<h1>Hello World!</h1>");
-        returnContent.append("<h3>You've executed a POST request against /action of 192.168.1.64</h3>");
+        returnContent.append("<h3>You've executed a POST request against /action of 127.0.0.1</h3>");
         returnContent.append("</body></html>");
         response->setContent(returnContent);
         response->addHeader("Content-Type", "text/html");
@@ -69,7 +70,7 @@ void buildResourceTree(server::resource* treeRoot)
     httpHandler actionPutHandler{[](packet::httpRequest* request, packet::httpResponse* response){
         std::string returnContent{"<!doctype html><html><head></head><body>"};
         returnContent.append("<h1>Hello World!</h1>");
-        returnContent.append("<h3>You've executed a PUT request against /action of 192.168.1.64</h3>");
+        returnContent.append("<h3>You've executed a PUT request against /action of 127.0.0.1</h3>");
         returnContent.append("</body></html>");
         response->setContent(returnContent);
         response->addHeader("Content-Type", "text/html");
