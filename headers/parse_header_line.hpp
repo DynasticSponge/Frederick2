@@ -1,6 +1,6 @@
 //
 // parse_header_line.hpp
-// ~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~
 //
 // Author: Joseph Adomatis
 // Copyright (c) 2020 Joseph R Adomatis (joseph dot adomatis at gmail dot com)
@@ -29,6 +29,9 @@ public:
     ~headerLineParser();
 protected:
 private:
+    ///////////////////////////////////////////////////////////////////////////////
+    // Private Properties
+    ///////////////////////////////////////////////////////////////////////////////
     size_t bytesReceived;
     std::string *buffer;
     std::string fieldName;

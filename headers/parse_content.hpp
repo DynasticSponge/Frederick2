@@ -29,9 +29,15 @@ public:
     ~contentParser();
 protected:
 private:
+    ///////////////////////////////////////////////////////////////////////////////
+    // Private Functions
+    ///////////////////////////////////////////////////////////////////////////////
     frederick2::httpEnums::httpStatus extractChunkLength(std::string&, size_t&);
     frederick2::httpEnums::httpStatus extractContentData(size_t contentLength, std::string&);
     frederick2::httpEnums::httpStatus parseChunkHeader(size_t&, strMAPstr&);
+    ///////////////////////////////////////////////////////////////////////////////
+    // Private Properties
+    ///////////////////////////////////////////////////////////////////////////////
     size_t bytesReceived;
     size_t chunksReceived;
     size_t contentLength;

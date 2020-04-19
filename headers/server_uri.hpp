@@ -1,6 +1,6 @@
 //
 // server_uri.hpp
-// ~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~
 //
 // Author: Joseph Adomatis
 // Copyright (c) 2020 Joseph R Adomatis (joseph dot adomatis at gmail dot com)
@@ -58,6 +58,9 @@ public:
     ~uri();
 protected:
 private:
+    ///////////////////////////////////////////////////////////////////////////////
+    // Private Properties
+    ///////////////////////////////////////////////////////////////////////////////
     bool fragmentProvided;
     bool userInfoProvided;
     bool hostProvided;

@@ -200,7 +200,6 @@ bool server::connection::readData(std::future<void> exitSignal)
                 if(!clockRunning)
                 {
                     startTime = std::chrono::steady_clock::now();
-                    curTime = startTime;
                     clockRunning = true;
                 }
                 else
@@ -224,6 +223,7 @@ bool server::connection::readData(std::future<void> exitSignal)
     return(true);
 }
 
+/*
 ///////////////////////////////////////////////////////////////////////////////
 // frederick2::httpServer::connection::readDataSSL
 ///////////////////////////////////////////////////////////////////////////////
@@ -264,7 +264,6 @@ bool server::connection::readDataSSL(std::future<void> exitSignal)
                 if(!clockRunning)
                 {
                     startTime = std::chrono::steady_clock::now();
-                    curTime = startTime;
                     clockRunning = true;
                 }
                 else
@@ -287,6 +286,7 @@ bool server::connection::readDataSSL(std::future<void> exitSignal)
     }
     return(true);
 }
+*/
 
 ///////////////////////////////////////////////////////////////////////////////
 // frederick2::httpServer::connection::sendData
@@ -335,6 +335,7 @@ bool server::connection::sendData(std::future<void> exitSignal)
     return(true);
 }
 
+/*
 ///////////////////////////////////////////////////////////////////////////////
 // frederick2::httpServer::connection::sendDataSSL
 ///////////////////////////////////////////////////////////////////////////////
@@ -381,6 +382,7 @@ bool server::connection::sendDataSSL(std::future<void> exitSignal)
     }
     return(true);
 }
+*/
 
 ///////////////////////////////////////////////////////////////////////////////
 // frederick2::httpServer::connection::setMaxTime

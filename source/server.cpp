@@ -124,7 +124,6 @@ packet::httpResponse *server::httpServer::handleRequest(packet::httpRequest *inb
         }
         else
         {
-            errorResponse = true;
             outbound->setStatus(enums::httpStatus::METHOD_NOT_ALLOWED);
             outbound->setStatusReason("Target resource does not support method");
             outbound->addHeader("Allow", targetResource->getMethodList());

@@ -1,6 +1,6 @@
 //
 // utility_buffer.hpp
-// ~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~
 //
 // Author: Joseph Adomatis
 // Copyright (c) 2020 Joseph R Adomatis (joseph dot adomatis at gmail dot com)
@@ -26,6 +26,9 @@ public:
     ~bufferStringReader();
 protected:
 private:
+    ///////////////////////////////////////////////////////////////////////////////
+    // Private Properties
+    ///////////////////////////////////////////////////////////////////////////////
     std::string *buffer;
     std::string statusReason;
 };

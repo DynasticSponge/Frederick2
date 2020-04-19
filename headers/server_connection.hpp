@@ -1,6 +1,6 @@
 //
 // server_connection.hpp
-// ~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~~~~~
 //
 // Author: Joseph Adomatis
 // Copyright (c) 2020 Joseph R Adomatis (joseph dot adomatis at gmail dot com)

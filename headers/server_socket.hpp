@@ -1,6 +1,6 @@
 //
 // server_socket.hpp
-// ~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~~
 //
 // Author: Joseph Adomatis
 // Copyright (c) 2020 Joseph R Adomatis (joseph dot adomatis at gmail dot com)
@@ -17,17 +17,24 @@
 
 class frederick2::httpServer::socket
 {
-public:
-    socket(const std::string&, const std::string&);
+public:    
     socket(const socket&) = delete;
     socket& operator=(const socket&) = delete;
-    void close();
-    int getFD();
-    bool listen(int);
-    bool pollIn();
     ~socket();
 protected:
 private:
+    ///////////////////////////////////////////////////////////////////////////////
+    // Friend Declarations
+    ///////////////////////////////////////////////////////////////////////////////
+    friend class frederick2::httpServer::httpServer;
+    ///////////////////////////////////////////////////////////////////////////////
+    // Private Functions
+    ///////////////////////////////////////////////////////////////////////////////
+    socket(const std::string&, const std::string&);
+    void close();
+    int getFD();
+    bool listen(int);
+    bool pollIn();    
     ///////////////////////////////////////////////////////////////////////////////
     // Private Properties
     ///////////////////////////////////////////////////////////////////////////////

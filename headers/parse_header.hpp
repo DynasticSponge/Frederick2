@@ -1,6 +1,6 @@
 //
 // parse_header.hpp
-// ~~~~~~~~~~~~~~~~~~~~~~
+// ~~~~~~~~~~~~~~~~
 //
 // Author: Joseph Adomatis
 // Copyright (c) 2020 Joseph R Adomatis (joseph dot adomatis at gmail dot com)
@@ -37,8 +37,14 @@ public:
     ~headerParser();
 protected:
 private:
+    ///////////////////////////////////////////////////////////////////////////////
+    // Private Functions
+    ///////////////////////////////////////////////////////////////////////////////
     frederick2::httpEnums::httpStatus handleNewHeaderField(const std::string&, const std::string&);
     frederick2::httpEnums::httpStatus parseCookie(const std::string&);
+    ///////////////////////////////////////////////////////////////////////////////
+    // Private Properties
+    ///////////////////////////////////////////////////////////////////////////////
     int versionMajor;
     int versionMinor;
     size_t bytesReceived;
