@@ -22,22 +22,31 @@ class frederick2::httpServer::connection
 {
 public:
     explicit connection(frederick2::httpServer::httpServer*);
-    connection() = delete;
-    bool acceptConnection(int);    
-    bool handleConnection(std::future<void>);
-    bool readData(std::future<void>);
-    bool sendData(std::future<void>);
+    connection() = delete;    
     ~connection();
 protected:
 private:
     ///////////////////////////////////////////////////////////////////////////////
+    // Friend Declarations
+    ///////////////////////////////////////////////////////////////////////////////
+    friend class frederick2::httpServer::httpServer;
+    ///////////////////////////////////////////////////////////////////////////////
     // Private Functions
     ///////////////////////////////////////////////////////////////////////////////
+    bool acceptConnection(int);    
     void close();
+    bool handleConnection(std::future<void>);
+    bool readData(std::future<void>);
+    bool readDataSSL(std::future<void>);
+    bool sendData(std::future<void>);
+    bool sendDataSSL(std::future<void>);
+    void setMaxTime(size_t);
     ///////////////////////////////////////////////////////////////////////////////
     // Private Properties
     ///////////////////////////////////////////////////////////////////////////////
+    bool connectionError;
     int socketFD;
+    size_t maxTime;
     socklen_t addressLength;
     struct sockaddr address;
     std::string receiveBuffer;

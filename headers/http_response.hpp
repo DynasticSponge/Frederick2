@@ -18,28 +18,32 @@ class frederick2::httpPacket::httpResponse
 {
 public:
     httpResponse();
-    std::string toString();
     void addCookie(const std::string&, const std::string&);
     void addHeader(const std::string&, const std::string&);
-    frederick2::httpEnums::httpStatus getStatus();
-    bool getHasContent();
-    void handleContent();
-    void handleErrorResponse();
     void setContent(const std::string&);
-    void setMajorVersion(int);
-    void setMinorVersion(int);
-    void setProtocol(frederick2::httpEnums::httpProtocol);
     void setStatus(frederick2::httpEnums::httpStatus);
     void setStatusReason(const std::string&);
     ~httpResponse();
 protected:
 private:
     ///////////////////////////////////////////////////////////////////////////////
+    // Friend Declarations
+    ///////////////////////////////////////////////////////////////////////////////
+    friend class frederick2::httpServer::connection;
+    friend class frederick2::httpServer::httpServer;
+    ///////////////////////////////////////////////////////////////////////////////
     // Private Functions
     ///////////////////////////////////////////////////////////////////////////////
-    std::string getErrorResponseContent();
+    bool getHasContent();
+    std::string getHeader(const std::string&);
     std::string getHeaderLines();
+    frederick2::httpEnums::httpStatus getStatus();
     std::string getStatusLine();
+    void handleContent();
+    void setMajorVersion(int);
+    void setMinorVersion(int);
+    void setProtocol(frederick2::httpEnums::httpProtocol);
+    std::string toString();
     ///////////////////////////////////////////////////////////////////////////////
     // Private Properties
     ///////////////////////////////////////////////////////////////////////////////

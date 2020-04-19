@@ -33,7 +33,7 @@ clean:
 	rm $(OUTPUTDIR)*.*
 
 debug:
-	$(MAKE) compile
+	$(MAKE) dcompile
 	$(MAKE) link
 	$(MAKE) postop
 

@@ -54,12 +54,13 @@ server::httpServer::httpServer()
     this->hasBindPort = false;
     this->hasListenQueue = false;
     this->bindPort = -1;
+    this->connectionTimeout = 30;
     this->listenQueue = -1;
     this->rootResource = new server::resource("RESOURCE_ROOT", enums::resourceType::STATIC);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpserver::server::getResourceTree
+// frederick2::httpServer::httpServer::getResourceTree
 ///////////////////////////////////////////////////////////////////////////////
 
 server::resource* server::httpServer::getResourceTree()
@@ -68,75 +69,91 @@ server::resource* server::httpServer::getResourceTree()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpserver::server::handleRequest
+// frederick2::httpServer::httpServer::handleRequest
 ///////////////////////////////////////////////////////////////////////////////
 
 packet::httpResponse *server::httpServer::handleRequest(packet::httpRequest *inbound)
 {
-    std::unique_ptr<utility::parseUtilities> parseUtility{new utility::parseUtilities()};
-    bool doCookies{false};
-    bool doHeaders{false};
+    bool errorResponse{false};
     packet::httpResponse *outbound{new packet::httpResponse()};
-    outbound->setMajorVersion(inbound->getMajorVersion());
-    outbound->setMinorVersion(inbound->getMinorVersion());
-    outbound->setProtocol(inbound->getProtocol());
-        
+    server::resource *targetResource{nullptr};
+    
+    // check for error detected during request parse/build
     if(inbound->getStatus() != enums::httpStatus::OK)
     {
+        errorResponse = true;
+        if(inbound->getStatus() == enums::httpStatus::REQUEST_TIMEOUT)
+        {
+            inbound->addHeader("Connection", "close");
+        }
         outbound->setStatus(inbound->getStatus());
-        outbound->setStatusReason(inbound->getStatusReason());
-        outbound->handleErrorResponse();
-        if(outbound->getHasContent()){
-            outbound->handleContent();
+        outbound->setStatusReason(inbound->getStatusReason());        
+    }
+
+    // check for HTTP version less than max conformant version
+    if(!errorResponse)
+    {
+        if(inbound->getMinorVersion() != 1)
+        {
+            errorResponse = true;
+            outbound->setStatus(enums::httpStatus::UPGRADE_REQUIRED);
+            outbound->setStatusReason("Server is only conformant to HTTP/1.1");
+            outbound->addHeader("Upgrade", "HTTP/1.1");
+            inbound->addHeader("Connection", "upgrade");
+        }
+    }   
+
+    // identify target resource
+    if(!errorResponse)
+    {   
+        targetResource = this->lookupResource(inbound);
+        if(targetResource == nullptr)
+        {
+            errorResponse = true;
+            outbound->setStatus(enums::httpStatus::NOT_FOUND);
+            outbound->setStatusReason("Target Resource Not Found");
         }
     }
-    else
-    {   server::resource *targetResource{nullptr};
-        targetResource = this->lookupResource(inbound);
-        if(targetResource != nullptr)
-        {
-            handlerCheck resourceHandler{targetResource->getHandler(inbound->getMethod())};
-            if(resourceHandler.first){
-                resourceHandler.second(inbound, outbound);
-                int outStatus = static_cast<int>(outbound->getStatus());
-                if(outStatus >= 400)
-                {
-                    outbound->handleErrorResponse();
-                }            
-            }
-            else
-            {
-                outbound->setStatus(enums::httpStatus::METHOD_NOT_ALLOWED);
-                outbound->setStatusReason("Target resource does not support method");
-                outbound->addHeader("Allow", targetResource->getMethodList());
-                outbound->handleErrorResponse();
-            }            
+
+    // identify and call appropriate handler
+    if(!errorResponse)
+    {
+        handlerCheck resourceHandler{targetResource->getHandler(inbound->getMethod())};
+        if(resourceHandler.first){
+            resourceHandler.second(inbound, outbound);
         }
         else
         {
-            outbound->setStatus(enums::httpStatus::NOT_FOUND);
-            outbound->setStatusReason("Target Resource Not Found");
-            outbound->handleErrorResponse();
-        }
-
-        if(outbound->getHasContent()){
-            outbound->handleContent();
+            errorResponse = true;
+            outbound->setStatus(enums::httpStatus::METHOD_NOT_ALLOWED);
+            outbound->setStatusReason("Target resource does not support method");
+            outbound->addHeader("Allow", targetResource->getMethodList());
         }
     }
 
-    outbound->addHeader("Connection", "Close");
+    // update content headers 
+    outbound->handleContent();
+    
+    // identify and set appropriate close header
+    std::string connHeaderValue{inbound->getHeader("Connection")};
+    if(connHeaderValue.size() == 0)
+    {
+        connHeaderValue.append("close");
+    }
+    outbound->addHeader("Connection", connHeaderValue);
+    
     return(outbound);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpserver::server::lookupResource
+// frederick2::httpServer::httpServer::lookupResource
 ///////////////////////////////////////////////////////////////////////////////
 
-server::resource *server::httpServer::lookupResource(packet::httpRequest *inbound)
+server::resource* server::httpServer::lookupResource(packet::httpRequest* inbound)
 {
-    server::uri requestURI = inbound->getURI();
+    server::uri requestURI{inbound->getURI()};
     std::deque<std::string> requestSegments{requestURI.getSegments()};
-    server::resource *targetResource = this->rootResource;
+    server::resource *targetResource{this->rootResource};
     if(requestSegments.front() != "RESOURCE_ROOT")
     {
         return(nullptr);
@@ -169,74 +186,7 @@ server::resource *server::httpServer::lookupResource(packet::httpRequest *inboun
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpserver::server::setBindAddress
-///////////////////////////////////////////////////////////////////////////////
-
-void server::httpServer::setBindAddress(const std::string& bindAddr)
-{
-    this->strBindAddr = bindAddr;
-    this->hasBindAddr = true;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpserver::server::setBindPort
-///////////////////////////////////////////////////////////////////////////////
-
-void server::httpServer::setBindPort(int port)
-{
-    this->bindPort = port;
-    this->hasBindPort = true;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpserver::server::setBindAddress
-///////////////////////////////////////////////////////////////////////////////
-
-void server::httpServer::setListenQueue(int queueSize)
-{
-    this->listenQueue = queueSize;
-    this->hasListenQueue = true;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpserver::server::start
-///////////////////////////////////////////////////////////////////////////////
-
-bool server::httpServer::start()
-{
-    bool safeStart{this->hasBindAddr};
-    safeStart &= this->hasBindPort;
-    safeStart &= this->hasListenQueue;
-    if(!safeStart){
-        return(safeStart);
-    }
-    this->didAsyncStart = safeStart;
-    auto funcPtr = &server::httpServer::runServer;
-    std::future<void> futureExit{this->killRunServer.get_future()};
-    this->catchRunServer = std::async(std::launch::async, funcPtr, this, std::move(futureExit));
-    return(safeStart);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpserver::server::stop
-///////////////////////////////////////////////////////////////////////////////
-
-void server::httpServer::stop()
-{
-    this->killRunServer.set_value();
-    if(this->catchRunServer.valid())
-    {
-        bool serverFinished = this->catchRunServer.get();
-        if(!serverFinished)
-        {
-            throw std::runtime_error("wtf: httpServer::runServer returned false");
-        }
-    }
-    this->didAsyncStart = false;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpserver::server::runServer
+// frederick2::httpServer::httpServer::runServer
 ///////////////////////////////////////////////////////////////////////////////
 
 bool server::httpServer::runServer(std::future<void> exitSignal)
@@ -267,6 +217,7 @@ bool server::httpServer::runServer(std::future<void> exitSignal)
         if(listenSock->pollIn())
         {
             server::connection *newConn{new server::connection(this)};
+            newConn->setMaxTime(this->connectionTimeout);
             if(newConn->acceptConnection(listenSock->getFD()))
             {
                 auto funcPtr = &server::connection::handleConnection;
@@ -304,6 +255,86 @@ bool server::httpServer::runServer(std::future<void> exitSignal)
 
     listenSock->close();
     return(true);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// frederick2::httpServer::httpServer::setBindAddress
+///////////////////////////////////////////////////////////////////////////////
+
+void server::httpServer::setBindAddress(const std::string& bindAddr)
+{
+    this->strBindAddr = bindAddr;
+    this->hasBindAddr = true;
+    return;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// frederick2::httpServer::httpServer::setBindPort
+///////////////////////////////////////////////////////////////////////////////
+
+void server::httpServer::setBindPort(int port)
+{
+    this->bindPort = port;
+    this->hasBindPort = true;
+    return;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// frederick2::httpServer::httpServer::setBindAddress
+///////////////////////////////////////////////////////////////////////////////
+
+void server::httpServer::setListenQueue(int queueSize)
+{
+    this->listenQueue = queueSize;
+    this->hasListenQueue = true;
+    return;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// frederick2::httpServer::httpServer::setConnectionTimeout
+///////////////////////////////////////////////////////////////////////////////
+
+void server::httpServer::setConnectionTimeout(size_t timeout)
+{
+    this->connectionTimeout = timeout;
+    return;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// frederick2::httpServer::httpServer::start
+///////////////////////////////////////////////////////////////////////////////
+
+bool server::httpServer::start()
+{
+    bool safeStart{this->hasBindAddr};
+    safeStart &= this->hasBindPort;
+    safeStart &= this->hasListenQueue;
+    if(!safeStart){
+        return(safeStart);
+    }
+    this->didAsyncStart = safeStart;
+    auto funcPtr = &server::httpServer::runServer;
+    std::future<void> futureExit{this->killRunServer.get_future()};
+    this->catchRunServer = std::async(std::launch::async, funcPtr, this, std::move(futureExit));
+    return(safeStart);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// frederick2::httpServer::httpServer::stop
+///////////////////////////////////////////////////////////////////////////////
+
+void server::httpServer::stop()
+{
+    this->killRunServer.set_value();
+    if(this->catchRunServer.valid())
+    {
+        bool serverFinished = this->catchRunServer.get();
+        if(!serverFinished)
+        {
+            throw std::runtime_error("wtf: httpServer::runServer returned false");
+        }
+    }
+    this->didAsyncStart = false;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

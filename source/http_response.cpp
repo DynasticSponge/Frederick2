@@ -49,7 +49,7 @@ packet::httpResponse::httpResponse()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpResponse::httpResponse::addCookie
+// frederick2::httpPacket::httpResponse::addCookie
 ///////////////////////////////////////////////////////////////////////////////
 
 void packet::httpResponse::addCookie(const std::string& cName, const std::string& cValue)
@@ -58,7 +58,7 @@ void packet::httpResponse::addCookie(const std::string& cName, const std::string
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpResponse::httpResponse::addHeader
+// frederick2::httpPacket::httpResponse::addHeader
 ///////////////////////////////////////////////////////////////////////////////
 
 void packet::httpResponse::addHeader(const std::string& hName, const std::string& hValue)
@@ -67,23 +67,7 @@ void packet::httpResponse::addHeader(const std::string& hName, const std::string
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpResponse::httpResponse::getErrorResponseContent
-///////////////////////////////////////////////////////////////////////////////
-
-std::string packet::httpResponse::getErrorResponseContent()
-{
-    std::string returnString;
-    returnString.append("<!DOCTYPE html>");
-    returnString.append("<html><head></head><body>");
-    returnString.append("@PROTOCOL@/@MAJORVERSION@.@MINORVERSION@");
-    returnString.append(" @STATUSCODE@ @STATUSTEXT@");
-    returnString.append("<br><br>Status Reason: @STATUSREASON@");
-    returnString.append("</body></html>");
-    return returnString;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpResponse::httpResponse::getHasContent
+// frederick2::httpPacket::httpResponse::getHasContent
 ///////////////////////////////////////////////////////////////////////////////
 
 bool packet::httpResponse::getHasContent()
@@ -92,7 +76,27 @@ bool packet::httpResponse::getHasContent()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpResponse::httpResponse::getHeaderLines
+// frederick2::httpPacket::httpResponse::getHeader
+///////////////////////////////////////////////////////////////////////////////
+
+std::string packet::httpResponse::getHeader(const std::string& hName)
+{
+    std::string returnString;
+    
+    try
+    {
+        returnString = this->headers.at(hName);
+    }
+    catch(const std::out_of_range& e)
+    {
+        returnString.clear();
+    }
+    
+    return(std::move(returnString));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// frederick2::httpPacket::httpResponse::getHeaderLines
 ///////////////////////////////////////////////////////////////////////////////
 
 std::string packet::httpResponse::getHeaderLines()
@@ -122,7 +126,7 @@ std::string packet::httpResponse::getHeaderLines()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpResponse::httpResponse::getStatus
+// frederick2::httpPacket::httpResponse::getStatus
 ///////////////////////////////////////////////////////////////////////////////
 
 enums::httpStatus packet::httpResponse::getStatus()
@@ -131,7 +135,7 @@ enums::httpStatus packet::httpResponse::getStatus()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpResponse::httpResponse::getStatusLine
+// frederick2::httpPacket::httpResponse::getStatusLine
 ///////////////////////////////////////////////////////////////////////////////
 
 std::string packet::httpResponse::getStatusLine()
@@ -152,11 +156,16 @@ std::string packet::httpResponse::getStatusLine()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpResponse::httpResponse::handleContent
+// frederick2::httpPacket::httpResponse::handleContent
 ///////////////////////////////////////////////////////////////////////////////
 
 void packet::httpResponse::handleContent()
 {
+    if(!this->hasContent)
+    {
+        return;
+    }
+    
     std::unique_ptr<utility::parseUtilities> parser{new utility::parseUtilities()};
     this->chunks.clear();
     if(this->content.size() > 256)
@@ -207,28 +216,7 @@ void packet::httpResponse::handleContent()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpResponse::httpResponse::handleErrorResponse
-///////////////////////////////////////////////////////////////////////////////
-
-void packet::httpResponse::handleErrorResponse()
-{
-    std::unique_ptr<utility::parseUtilities> parseUtility{new utility::parseUtilities()};
-    std::string newLine{"\r\n"};
-    std::string errorContent{this->getErrorResponseContent()};
-    parseUtility->replace(errorContent, "@PROTOCOL@", enums::converter::protocol2str(this->protocol));
-    parseUtility->replace(errorContent, "@MAJORVERSION@", std::to_string(this->versionMajor));
-    parseUtility->replace(errorContent, "@MINORVERSION@", std::to_string(this->versionMinor));
-    parseUtility->replace(errorContent, "@STATUSCODE@", std::to_string(static_cast<int>(this->status)));
-    parseUtility->replace(errorContent, "@STATUSTEXT@", enums::converter::status2str(this->status));
-    parseUtility->replace(errorContent, "@STATUSREASON@", this->statusReason);
-    this->content = std::move(errorContent);
-    this->hasContent = true;
-    this->addHeader("Content-Type", "text/html");
-    return;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpResponse::httpResponse::setContent
+// frederick2::httpPacket::httpResponse::setContent
 ///////////////////////////////////////////////////////////////////////////////
 
 void packet::httpResponse::setContent(const std::string& newContent)
@@ -238,7 +226,7 @@ void packet::httpResponse::setContent(const std::string& newContent)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpResponse::httpResponse::setMajorVersion
+// frederick2::httpPacket::httpResponse::setMajorVersion
 ///////////////////////////////////////////////////////////////////////////////
 
 void packet::httpResponse::setMajorVersion(int majVersion)
@@ -247,7 +235,7 @@ void packet::httpResponse::setMajorVersion(int majVersion)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpResponse::httpResponse::setMinorVersion
+// frederick2::httpPacket::httpResponse::setMinorVersion
 ///////////////////////////////////////////////////////////////////////////////
 
 void packet::httpResponse::setMinorVersion(int minVersion)
@@ -256,7 +244,7 @@ void packet::httpResponse::setMinorVersion(int minVersion)
 }
     
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpResponse::httpResponse::setProtocol
+// frederick2::httpPacket::httpResponse::setProtocol
 ///////////////////////////////////////////////////////////////////////////////
 
 void packet::httpResponse::setProtocol(enums::httpProtocol inProtocol)
@@ -265,7 +253,7 @@ void packet::httpResponse::setProtocol(enums::httpProtocol inProtocol)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpResponse::httpResponse::setStatus
+// frederick2::httpPacket::httpResponse::setStatus
 ///////////////////////////////////////////////////////////////////////////////
 
 void packet::httpResponse::setStatus(enums::httpStatus inStatus)
@@ -274,7 +262,7 @@ void packet::httpResponse::setStatus(enums::httpStatus inStatus)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpResponse::httpResponse::setStatusReason
+// frederick2::httpPacket::httpResponse::setStatusReason
 ///////////////////////////////////////////////////////////////////////////////
 
 void packet::httpResponse::setStatusReason(const std::string& reason)
@@ -283,7 +271,7 @@ void packet::httpResponse::setStatusReason(const std::string& reason)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpResponse::httpResponse::toString
+// frederick2::httpPacket::httpResponse::toString
 ///////////////////////////////////////////////////////////////////////////////
 
 std::string packet::httpResponse::toString()

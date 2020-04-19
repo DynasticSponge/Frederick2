@@ -57,7 +57,7 @@ packet::httpRequest::httpRequest(std::string* inBuffer)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpRequest::httpRequest::addFileSegment
+// frederick2::httpPacket::httpRequest::addFileSegment
 ///////////////////////////////////////////////////////////////////////////////
 
 void packet::httpRequest::addFileSegment(const std::string& sName)
@@ -71,7 +71,17 @@ void packet::httpRequest::addFileSegment(const std::string& sName)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpRequest::httpRequest::addPathParameter
+// frederick2::httpPacket::httpRequest::addHeader
+///////////////////////////////////////////////////////////////////////////////
+
+void packet::httpRequest::addHeader(const std::string& hName, const std::string& hValue)
+{
+    this->headers[hName] = hValue;    
+    return;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// frederick2::httpPacket::httpRequest::addPathParameter
 ///////////////////////////////////////////////////////////////////////////////
 
 void packet::httpRequest::addPathParameter(const std::string& pName, const std::string& pValue)
@@ -81,7 +91,7 @@ void packet::httpRequest::addPathParameter(const std::string& pName, const std::
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpRequest::httpRequest::buildRequest
+// frederick2::httpPacket::httpRequest::buildRequest
 ///////////////////////////////////////////////////////////////////////////////
 
 void packet::httpRequest::buildRequest()
@@ -139,7 +149,7 @@ void packet::httpRequest::buildRequest()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpRequest::httpRequest::collectRequestBody
+// frederick2::httpPacket::httpRequest::collectRequestBody
 ///////////////////////////////////////////////////////////////////////////////
 
 enums::httpStatus packet::httpRequest::collectRequestBody()
@@ -170,7 +180,7 @@ enums::httpStatus packet::httpRequest::collectRequestBody()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpRequest::httpRequest::getContent
+// frederick2::httpPacket::httpRequest::getContent
 ///////////////////////////////////////////////////////////////////////////////
 
 std::string packet::httpRequest::getContent()
@@ -179,7 +189,7 @@ std::string packet::httpRequest::getContent()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpRequest::httpRequest::getCookies
+// frederick2::httpPacket::httpRequest::getCookies
 ///////////////////////////////////////////////////////////////////////////////
 
 strMAPstr packet::httpRequest::getCookies()
@@ -188,7 +198,7 @@ strMAPstr packet::httpRequest::getCookies()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpRequest::httpRequest::getFilePath
+// frederick2::httpPacket::httpRequest::getFilePath
 ///////////////////////////////////////////////////////////////////////////////
 
 std::string packet::httpRequest::getFilePath()
@@ -197,7 +207,27 @@ std::string packet::httpRequest::getFilePath()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpRequest::httpRequest::getHeaders
+// frederick2::httpPacket::httpRequest::getHeader
+///////////////////////////////////////////////////////////////////////////////
+
+std::string packet::httpRequest::getHeader(const std::string& hName)
+{
+    std::string returnString;
+    
+    try
+    {
+        returnString = this->headers.at(hName);
+    }
+    catch(const std::out_of_range& e)
+    {
+        returnString.clear();
+    }
+    
+    return(std::move(returnString));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// frederick2::httpPacket::httpRequest::getHeaders
 ///////////////////////////////////////////////////////////////////////////////
 
 strMAPstr packet::httpRequest::getHeaders()
@@ -206,7 +236,7 @@ strMAPstr packet::httpRequest::getHeaders()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpRequest::httpRequest::getMajorVersion
+// frederick2::httpPacket::httpRequest::getMajorVersion
 ///////////////////////////////////////////////////////////////////////////////
 
 int packet::httpRequest::getMajorVersion()
@@ -215,7 +245,7 @@ int packet::httpRequest::getMajorVersion()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpRequest::httpRequest::getMethod
+// frederick2::httpPacket::httpRequest::getMethod
 ///////////////////////////////////////////////////////////////////////////////
 
 frederick2::httpEnums::httpMethod packet::httpRequest::getMethod()
@@ -224,7 +254,7 @@ frederick2::httpEnums::httpMethod packet::httpRequest::getMethod()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpRequest::httpRequest::getMinorVersion
+// frederick2::httpPacket::httpRequest::getMinorVersion
 ///////////////////////////////////////////////////////////////////////////////
 
 int packet::httpRequest::getMinorVersion()
@@ -233,7 +263,7 @@ int packet::httpRequest::getMinorVersion()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpRequest::httpRequest::getPathParameter
+// frederick2::httpPacket::httpRequest::getPathParameter
 ///////////////////////////////////////////////////////////////////////////////
 
 std::string packet::httpRequest::getPathParameter(const std::string& pName)
@@ -253,7 +283,7 @@ std::string packet::httpRequest::getPathParameter(const std::string& pName)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpRequest::httpRequest::getProtocol
+// frederick2::httpPacket::httpRequest::getProtocol
 ///////////////////////////////////////////////////////////////////////////////
 
 frederick2::httpEnums::httpProtocol packet::httpRequest::getProtocol()
@@ -262,7 +292,7 @@ frederick2::httpEnums::httpProtocol packet::httpRequest::getProtocol()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpRequest::httpRequest::getQueryParameter
+// frederick2::httpPacket::httpRequest::getQueryParameter
 ///////////////////////////////////////////////////////////////////////////////
 
 std::string packet::httpRequest::getQueryParameter(const std::string& pName)
@@ -282,7 +312,7 @@ std::string packet::httpRequest::getQueryParameter(const std::string& pName)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpRequest::httpRequest::getStatus
+// frederick2::httpPacket::httpRequest::getStatus
 ///////////////////////////////////////////////////////////////////////////////
 
 frederick2::httpEnums::httpStatus packet::httpRequest::getStatus()
@@ -291,7 +321,7 @@ frederick2::httpEnums::httpStatus packet::httpRequest::getStatus()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpRequest::httpRequest::getStatusReason
+// frederick2::httpPacket::httpRequest::getStatusReason
 ///////////////////////////////////////////////////////////////////////////////
 
 std::string packet::httpRequest::getStatusReason()
@@ -300,7 +330,7 @@ std::string packet::httpRequest::getStatusReason()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpRequest::httpRequest::getURI
+// frederick2::httpPacket::httpRequest::getURI
 ///////////////////////////////////////////////////////////////////////////////
 
 frederick2::httpServer::uri packet::httpRequest::getURI()
@@ -309,7 +339,7 @@ frederick2::httpServer::uri packet::httpRequest::getURI()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpRequest::httpRequest::getHasContent
+// frederick2::httpPacket::httpRequest::getHasContent
 ///////////////////////////////////////////////////////////////////////////////
 
 bool packet::httpRequest::getHasContent()
@@ -318,13 +348,15 @@ bool packet::httpRequest::getHasContent()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpRequest::httpRequest::validateRequest
+// frederick2::httpPacket::httpRequest::validateRequest
 ///////////////////////////////////////////////////////////////////////////////
 
 enums::httpStatus packet::httpRequest::validateRequest()
 {
-    if(this->requestStatus != enums::httpStatus::OK)
+    if(this->versionMajor != 1)
     {
+        this->requestStatus = enums::httpStatus::HTTP_VERSION_NOT_SUPPORTED;
+        this->statusReason = "Server is only conformant to HTTP/1.1";
         return(this->requestStatus);
     }
 

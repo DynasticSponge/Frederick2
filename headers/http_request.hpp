@@ -22,10 +22,10 @@
 class frederick2::httpPacket::httpRequest
 {
 public:
-    explicit httpRequest(std::string*);
     std::string getContent();
     strMAPstr getCookies();
     std::string getFilePath();
+    std::string getHeader(const std::string&);    
     strMAPstr getHeaders();
     int getMajorVersion();
     frederick2::httpEnums::httpMethod getMethod();
@@ -35,7 +35,6 @@ public:
     std::string getQueryParameter(const std::string&);
     frederick2::httpEnums::httpStatus getStatus();
     std::string getStatusReason();
-    frederick2::httpServer::uri getURI();
     bool getHasContent();
     ~httpRequest();
 protected:
@@ -48,10 +47,13 @@ private:
     ///////////////////////////////////////////////////////////////////////////////
     // Private Functions
     ///////////////////////////////////////////////////////////////////////////////
+    explicit httpRequest(std::string*);
     void addFileSegment(const std::string&);
+    void addHeader(const std::string&, const std::string&);
     void addPathParameter(const std::string&, const std::string&);
     void buildRequest();
     frederick2::httpEnums::httpStatus collectRequestBody();
+    frederick2::httpServer::uri getURI();
     frederick2::httpEnums::httpStatus validateRequest();
     ///////////////////////////////////////////////////////////////////////////////
     // Private Properties

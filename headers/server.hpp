@@ -29,6 +29,7 @@ public:
     bool runServer(std::future<void>);
     void setBindAddress(const std::string&);
     void setBindPort(int);
+    void setConnectionTimeout(size_t);
     void setListenQueue(int);
     bool start();
     void stop();
@@ -53,6 +54,7 @@ private:
     bool hasListenQueue;
     int bindPort;
     int listenQueue;
+    size_t connectionTimeout;
     std::string strBindAddr;
     std::future<bool> catchRunServer;
     std::promise<void> killRunServer;
