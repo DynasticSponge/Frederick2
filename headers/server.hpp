@@ -11,6 +11,7 @@
 #define SERVER_HPP
 
 #include <future>
+#include <openssl/ssl.h>
 #include <string>
 #include <vector>
 
@@ -31,6 +32,9 @@ public:
     void setBindPort(int);
     void setConnectionTimeout(size_t);
     void setListenQueue(int);
+    void setSSLPrivateKey(const std::string&);
+    void setSSLPublicCert(const std::string&);
+    void setUseSSL(bool);
     bool start();
     void stop();
     ~httpServer();
@@ -43,7 +47,9 @@ private:
     ///////////////////////////////////////////////////////////////////////////////
     // Private Functions
     ///////////////////////////////////////////////////////////////////////////////
+    void destroyOpenSSL();
     frederick2::httpPacket::httpResponse *handleRequest(frederick2::httpPacket::httpRequest*);
+    void initializeOpenSSL();
     frederick2::httpServer::resource *lookupResource(frederick2::httpPacket::httpRequest*);
     ///////////////////////////////////////////////////////////////////////////////
     // Private Properties
@@ -52,10 +58,17 @@ private:
     bool hasBindAddr;
     bool hasBindPort;
     bool hasListenQueue;
+    bool hasSSLCert;
+    bool hasSSLKey;
+    bool useSSL;
+    bool runningWithSSL;
     int bindPort;
     int listenQueue;
     size_t connectionTimeout;
+    SSL_CTX *sslContext;
     std::string strBindAddr;
+    std::string sslCertPath;
+    std::string sslKeyPath;
     std::future<bool> catchRunServer;
     std::promise<void> killRunServer;
     std::vector<std::future<bool>> childFutures;

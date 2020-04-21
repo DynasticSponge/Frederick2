@@ -14,6 +14,9 @@
 #include <memory>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <openssl/bio.h>
+#include <openssl/err.h>
+#include <openssl/ssl.h>
 #include <string>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -48,10 +51,14 @@ namespace server = frederick2::httpServer;
 
 server::connection::connection(server::httpServer *hostServer)
 {
-    this->host = hostServer;
     this->connectionError = false;
+    this->host = hostServer;
     this->maxTime = 30;
-    this->socketFD = -1;    
+    this->sock = nullptr;
+    this->sslActive = false;
+    this->sslContext = nullptr;
+    this->sslConnection = nullptr;
+    this->useSSL = false;    
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -61,16 +68,32 @@ server::connection::connection(server::httpServer *hostServer)
 bool server::connection::acceptConnection(int sockFD)
 {
     bool returnValue{false};
-    this->socketFD = ::accept(sockFD, &this->address, &this->addressLength);
-    if (this->socketFD > 0)
+    ERR_clear_error();
+    this->sock = new server::socket(::accept(sockFD, &this->address, &this->addressLength));
+    if (this->sock->getFD() > 0)
     {
         size_t optval{1};
         socklen_t optlen{sizeof(optval)};
-        setsockopt(this->socketFD, SOL_SOCKET, SO_KEEPALIVE, &optval, optlen);
+        setsockopt(this->sock->getFD(), SOL_SOCKET, SO_KEEPALIVE, &optval, optlen);
         optval = 30000;
         optlen = sizeof(optval);
-        setsockopt(this->socketFD, IPPROTO_TCP, TCP_USER_TIMEOUT, &optval, optlen);
+        setsockopt(this->sock->getFD(), IPPROTO_TCP, TCP_USER_TIMEOUT, &optval, optlen);
         returnValue = true;
+
+        if(this->useSSL)
+        {
+            this->sslConnection = SSL_new(this->sslContext);
+            SSL_set_fd(this->sslConnection, this->sock->getFD());
+            
+            auto sslError = SSL_accept(this->sslConnection);
+            if(sslError <= 0)
+            {
+                auto sslErrorDesc{SSL_get_error(this->sslConnection, sslError)};
+                this->shutdownSSLConnection();
+                returnValue = false;
+            }
+            this->sslActive = true;
+        }
     }
     return(returnValue);
 }
@@ -81,49 +104,90 @@ bool server::connection::acceptConnection(int sockFD)
 
 void server::connection::close()
 {
-    ::close(this->socketFD);
+    this->sock->close();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// frederick2::httpServer::connection::handleInput()
+// frederick2::httpServer::connection::handleConnection()
 ///////////////////////////////////////////////////////////////////////////////
 
 bool server::connection::handleConnection(std::future<void> exitSignal)
-{
-    auto readFuncPtr = &server::connection::readData;
-    std::promise<void> promiseRead;
-    std::future<void> futureRead = promiseRead.get_future();
-    std::future<bool> readFuture = std::async(std::launch::async, readFuncPtr, this, std::move(futureRead));
-    
-    auto sendFuncPtr = &server::connection::sendData;
-    std::promise<void> promiseSend;
-    std::future<void> futureSend = promiseSend.get_future();
-    std::future<bool> sendFuture = std::async(std::launch::async, sendFuncPtr, this, std::move(futureSend));
-    
+{   
+    auto startTime{std::chrono::steady_clock::now()};
+    auto curTime{std::chrono::steady_clock::now()};
+    bool clockRunning{false};
+    size_t maxTimeMills{this->maxTime * 1000};
     auto signalStatus = exitSignal.wait_for(std::chrono::milliseconds(0));    
     while(signalStatus != std::future_status::ready && !this->connectionError)
     {
-        if(this->receiveBuffer.size() > 0)
-        {
+        if(this->sock->pollIn())
+        {   
+            clockRunning = false;
             packet::httpRequest *request{new packet::httpRequest(&this->receiveBuffer)};
-            request->buildRequest();
-            
-            packet::httpResponse *response{this->host->handleRequest(request)};
-            std::string outString{response->toString()};
-            
-            this->sendBuffer.append(outString);
-            bool closeConn{response->getHeader("Connection") == "close"};
-            
-            delete request;
-            delete response;
-            request = nullptr;
-            response = nullptr;
-
-            if(closeConn)
+            auto buildFuncPtr = &packet::httpRequest::buildRequest;
+            std::future<bool> buildFuture{std::async(std::launch::async, buildFuncPtr, request)};
+            auto buildStatus = buildFuture.wait_for(std::chrono::milliseconds(0));    
+            while(buildStatus != std::future_status::ready && !this->connectionError)
             {
-                break;
-            }                       
+                if(this->sslActive)
+                {
+                    this->readDataSSL();
+                }
+                else
+                {
+                    this->readData();
+                }
+                buildStatus = buildFuture.wait_for(std::chrono::milliseconds(0));
+            }
+            if(!this->connectionError)
+            {
+                bool buildGet{buildFuture.get()};
+                if(!buildGet)
+                {
+                    throw std::runtime_error("wtf: packet::httpRequest::buildRequest returned false");
+                }
+                
+                packet::httpResponse *response{this->host->handleRequest(request)};
+                std::string outString{response->toString()};
+
+                if(this->sslActive)
+                {
+                    this->sendDataSSL(std::move(outString));
+                }
+                else
+                {
+                    this->sendData(std::move(outString));
+                }
+                
+                bool closeConn{response->getHeader("Connection") == "close"};
+                
+                delete request;
+                delete response;
+                
+                if(closeConn)
+                {
+                    break;
+                }
+            }                                   
         }
+        else
+        {
+            if(!clockRunning)
+            {
+                clockRunning = true;
+                startTime = std::chrono::steady_clock::now();
+            }
+            else
+            {
+                curTime = std::chrono::steady_clock::now();
+                auto timeLapse{curTime - startTime};
+                if(std::chrono::duration_cast<std::chrono::milliseconds>(timeLapse).count() > maxTimeMills)
+                {
+                    this->connectionError = true;
+                }
+            }
+        }
+        
         signalStatus = exitSignal.wait_for(std::chrono::milliseconds(0));        
     }
     
@@ -131,31 +195,13 @@ bool server::connection::handleConnection(std::future<void> exitSignal)
     // close connetion
     ///////////////////////////////////////////////////////////////////////////////
     
-    while(this->sendBuffer.size() > 0)
+    if(this->sslActive)
     {
-        continue;
+        this->shutdownSSLConnection();
     }
     
-    ::shutdown(this->socketFD, SHUT_RD);
-    promiseRead.set_value();
-    if(readFuture.valid()){
-        bool readFinished = readFuture.get();
-        if(!readFinished)
-        {
-            throw std::runtime_error("wtf: connection::readData returned false");
-        }
-    }    
-    
-    promiseSend.set_value();
-    if(sendFuture.valid()){
-        bool sendFinished = sendFuture.get();
-        if(!sendFinished)
-        {
-            throw std::runtime_error("wtf: connection::sendData returned false");
-        }
-    }
-    ::shutdown(this->socketFD, SHUT_RDWR);
-    ::close(this->socketFD);
+    this->sock->shutdown(true, true);
+    this->sock->close();   
     
     return(true);
 }
@@ -164,225 +210,91 @@ bool server::connection::handleConnection(std::future<void> exitSignal)
 // frederick2::httpServer::connection::readData
 ///////////////////////////////////////////////////////////////////////////////
 
-bool server::connection::readData(std::future<void> exitSignal)
+void server::connection::readData()
 {
-    ///////////////////////////////////////////////////////////////////////////////
-    // initialize raw char buffer
-    ///////////////////////////////////////////////////////////////////////////////
-    
     std::vector<char> rawBuffer(256);
-
-    ///////////////////////////////////////////////////////////////////////////////
-    // continuously read raw chars into receivebuffer
-    ///////////////////////////////////////////////////////////////////////////////
-
-    bool clockRunning{false};
-    size_t maxTimeMills{this->maxTime * 1000};
-    auto startTime{std::chrono::steady_clock::now()};
-    auto curTime{std::chrono::steady_clock::now()};
-
-    auto signalStatus = exitSignal.wait_for(std::chrono::milliseconds(0));    
-    while(signalStatus != std::future_status::ready)
+    while(this->sock->pollIn())
     {
-        ssize_t bytesReceived{::recv(this->socketFD, &rawBuffer[0], rawBuffer.capacity(), MSG_DONTWAIT)};
+        ssize_t bytesReceived{::recv(this->sock->getFD(), &rawBuffer[0], rawBuffer.capacity(), 0)};
         if(bytesReceived > 0)
         {
             this->receiveBuffer.append(&rawBuffer[0], bytesReceived);
-            rawBuffer.clear();
-            clockRunning = false;
+            rawBuffer.clear();                        
         }
         else
-        {   
-            bool otherError{true};
-            if(errno == EAGAIN || errno == EWOULDBLOCK)
-            {   
-                otherError = false;
-                if(!clockRunning)
-                {
-                    startTime = std::chrono::steady_clock::now();
-                    clockRunning = true;
-                }
-                else
-                {
-                    curTime = std::chrono::steady_clock::now();
-                    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(curTime - startTime).count();
-                    if(duration > maxTimeMills)
-                    {
-                        otherError = true;
-                    }
-                }               
-            }
-            if(otherError)
-            {
-                this->connectionError = true;
-                break;
-            }                    
-        }        
-        signalStatus = exitSignal.wait_for(std::chrono::milliseconds(0));
+        {
+            this->connectionError = true;
+        }
     }
-    return(true);
+    return;
 }
 
-/*
 ///////////////////////////////////////////////////////////////////////////////
 // frederick2::httpServer::connection::readDataSSL
 ///////////////////////////////////////////////////////////////////////////////
 
-bool server::connection::readDataSSL(std::future<void> exitSignal)
+void server::connection::readDataSSL()
 {
-    ///////////////////////////////////////////////////////////////////////////////
-    // initialize raw char buffer
-    ///////////////////////////////////////////////////////////////////////////////
-    
     std::vector<char> rawBuffer(256);
-
-    ///////////////////////////////////////////////////////////////////////////////
-    // continuously read raw chars into receivebuffer
-    ///////////////////////////////////////////////////////////////////////////////
-
-    bool clockRunning{false};
-    size_t maxTimeMills{this->maxTime * 1000};
-    auto startTime{std::chrono::steady_clock::now()};
-    auto curTime{std::chrono::steady_clock::now()};
-
-    auto signalStatus = exitSignal.wait_for(std::chrono::milliseconds(0));    
-    while(signalStatus != std::future_status::ready)
+    if(this->sock->pollIn())
     {
-        ssize_t bytesReceived{::recv(this->socketFD, &rawBuffer[0], rawBuffer.capacity(), MSG_DONTWAIT)};
-        if(bytesReceived > 0)
+        do
         {
-            this->receiveBuffer.append(&rawBuffer[0], bytesReceived);
-            rawBuffer.clear();
-            clockRunning = false;
-        }
-        else
-        {   
-            bool otherError{true};
-            if(errno == EAGAIN || errno == EWOULDBLOCK)
-            {   
-                otherError = false;
-                if(!clockRunning)
-                {
-                    startTime = std::chrono::steady_clock::now();
-                    clockRunning = true;
-                }
-                else
-                {
-                    curTime = std::chrono::steady_clock::now();
-                    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(curTime - startTime).count();
-                    if(duration > maxTimeMills)
-                    {
-                        otherError = true;
-                    }
-                }               
+            ERR_clear_error();
+            ssize_t bytesReceived{SSL_read(this->sslConnection, &rawBuffer[0], rawBuffer.capacity())};
+            if(bytesReceived > 0)
+            {
+                this->receiveBuffer.append(&rawBuffer[0], bytesReceived);
+                rawBuffer.clear();
             }
-            if(otherError)
+            else
             {
                 this->connectionError = true;
                 break;
-            }                    
-        }        
-        signalStatus = exitSignal.wait_for(std::chrono::milliseconds(0));
+            }
+        } while (SSL_pending(this->sslConnection) > 0);
     }
-    return(true);
+    return;
 }
-*/
 
 ///////////////////////////////////////////////////////////////////////////////
 // frederick2::httpServer::connection::sendData
 ///////////////////////////////////////////////////////////////////////////////
 
-bool server::connection::sendData(std::future<void> exitSignal)
+void server::connection::sendData(std::string sendBuffer)
 {
-    auto signalStatus = exitSignal.wait_for(std::chrono::milliseconds(0));    
-    while(signalStatus != std::future_status::ready)
-    {
-        size_t buffSize{this->sendBuffer.size()};
-        while(buffSize > 0)
-        {   
-            std::string outStr;
-            int sendReturn{0};
-            
-            if(buffSize > 255)
-            {
-                outStr = this->sendBuffer.substr(0, 255);
-                this->sendBuffer.erase(0, 255);
-            }
-            else
-            {
-                outStr = this->sendBuffer.substr(0, buffSize);
-                this->sendBuffer.erase(0, buffSize);
-            }
-            
-            char *outCStr = (char*)outStr.c_str();
-            size_t outCStrLen = outStr.size();
+    char *outCStr = (char*)sendBuffer.c_str();
+    size_t outCStrLen = sendBuffer.size();
 
-            while (outCStrLen > 0)
-            {
-                ssize_t numSent = ::send(this->socketFD, outCStr, outCStrLen, 0);
-                if (numSent < 0)
-                {
-                    this->connectionError = true;
-                    break;
-                }
-                outCStr += numSent;
-                outCStrLen -= numSent;
-            }
-            buffSize = this->sendBuffer.size();
+    while (outCStrLen > 0)
+    {
+        ssize_t numSent{::send(this->sock->getFD(), outCStr, outCStrLen, 0)};
+        if (numSent < 0)
+        {
+            this->connectionError = true;
+            break;
         }
-        signalStatus = exitSignal.wait_for(std::chrono::milliseconds(0));
+        outCStr += numSent;
+        outCStrLen -= numSent;
     }
-    return(true);
+    return;
 }
 
-/*
 ///////////////////////////////////////////////////////////////////////////////
 // frederick2::httpServer::connection::sendDataSSL
 ///////////////////////////////////////////////////////////////////////////////
 
-bool server::connection::sendDataSSL(std::future<void> exitSignal)
+void server::connection::sendDataSSL(std::string sendBuffer)
 {
-    auto signalStatus = exitSignal.wait_for(std::chrono::milliseconds(0));    
-    while(signalStatus != std::future_status::ready)
+    size_t buffSize{sendBuffer.size()};
+    ERR_clear_error();
+    ssize_t numSent{SSL_write(this->sslConnection, sendBuffer.c_str(), buffSize)};
+    if(numSent < 0)
     {
-        size_t buffSize{this->sendBuffer.size()};
-        while(buffSize > 0)
-        {   
-            std::string outStr;
-            int sendReturn{0};
-            
-            if(buffSize > 255)
-            {
-                outStr = this->sendBuffer.substr(0, 255);
-                this->sendBuffer.erase(0, 255);
-            }
-            else
-            {
-                outStr = this->sendBuffer.substr(0, buffSize);
-                this->sendBuffer.erase(0, buffSize);
-            }
-            
-            char *outCStr = (char*)outStr.c_str();
-            size_t outCStrLen = outStr.size();
-
-            while (outCStrLen > 0)
-            {
-                ssize_t numSent = ::send(this->socketFD, outCStr, outCStrLen, 0);
-                if (numSent < 0)
-                {
-                    this->connectionError = true;
-                    break;
-                }
-                outCStr += numSent;
-                outCStrLen -= numSent;
-            }
-            buffSize = this->sendBuffer.size();
-        }
-        signalStatus = exitSignal.wait_for(std::chrono::milliseconds(0));
+        this->connectionError = true;
     }
-    return(true);
+    return;
 }
-*/
 
 ///////////////////////////////////////////////////////////////////////////////
 // frederick2::httpServer::connection::setMaxTime
@@ -394,6 +306,60 @@ void server::connection::setMaxTime(size_t timeout)
     return;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// frederick2::httpServer::connection::setSSLContext
+///////////////////////////////////////////////////////////////////////////////
+
+void server::connection::setSSLContext(SSL_CTX *context)
+{
+    this->sslContext = context;
+    return;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// frederick2::httpServer::connection::setSSLPrivateKey
+///////////////////////////////////////////////////////////////////////////////
+
+void server::connection::setSSLPrivateKey(const std::string& keyPath)
+{
+    this->sslKeyPath = keyPath;
+    return;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// frederick2::httpServer::connection::setSSLPublicCert
+///////////////////////////////////////////////////////////////////////////////
+
+void server::connection::setSSLPublicCert(const std::string& certPath)
+{
+    this->sslCertPath = certPath;
+    return;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// frederick2::httpServer::connection::setUseSSL
+///////////////////////////////////////////////////////////////////////////////
+
+void server::connection::setUseSSL(bool sslFlag)
+{
+    this->useSSL = sslFlag;
+    return;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// frederick2::httpServer::connection::shutdownSSLConnection
+///////////////////////////////////////////////////////////////////////////////
+
+void server::connection::shutdownSSLConnection()
+{
+    if(SSL_shutdown(this->sslConnection) == 0)
+    {
+        SSL_shutdown(this->sslConnection);
+    }
+    SSL_free(this->sslConnection);
+    this->sslActive = false;
+    return;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Deconstructor
@@ -401,5 +367,10 @@ void server::connection::setMaxTime(size_t timeout)
 
 server::connection::~connection()
 {
+    if(this->sock != nullptr)
+    {
+        delete this->sock;
+        this->sock = nullptr;
+    }
     this->host = nullptr;
 }

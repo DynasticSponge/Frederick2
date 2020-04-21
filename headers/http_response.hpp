@@ -43,6 +43,7 @@ private:
     void setMajorVersion(int);
     void setMinorVersion(int);
     void setProtocol(frederick2::httpEnums::httpProtocol);
+    void setRequestMethod(frederick2::httpEnums::httpMethod);
     std::string toString();
     ///////////////////////////////////////////////////////////////////////////////
     // Private Properties
@@ -58,6 +59,7 @@ private:
     strVECTOR chunks;
     std::string content;
     std::string statusReason;
+    frederick2::httpEnums::httpMethod requestMethod;
     frederick2::httpEnums::httpProtocol protocol;
     frederick2::httpEnums::httpStatus status;
 };

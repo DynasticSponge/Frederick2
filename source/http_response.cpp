@@ -163,6 +163,16 @@ void packet::httpResponse::handleContent()
 {
     if(!this->hasContent)
     {
+        if(this->requestMethod == enums::httpMethod::CONNECT){
+            return;
+        }
+
+        int statusCode{static_cast<int>(this->status)};
+        if(statusCode > 200 && statusCode != 204)
+        {
+            this->addHeader("Content-Length", "0");
+        }
+
         return;
     }
     
@@ -212,7 +222,17 @@ void packet::httpResponse::handleContent()
         this->contentChunked = false;
         this->contentLength = this->content.size();
         this->addHeader("Content-Length", std::to_string(this->contentLength));
-    }    
+    }
+
+    if(this->requestMethod == enums::httpMethod::HEAD)
+    {
+        this->content.clear();
+        this->chunks.clear();
+        this->contentChunked = false;
+        this->hasContent = false;
+    }
+
+    return;    
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -250,6 +270,15 @@ void packet::httpResponse::setMinorVersion(int minVersion)
 void packet::httpResponse::setProtocol(enums::httpProtocol inProtocol)
 {
     this->protocol = inProtocol;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// frederick2::httpPacket::httpResponse::setRequestMethod
+///////////////////////////////////////////////////////////////////////////////
+
+void packet::httpResponse::setRequestMethod(enums::httpMethod inMethod)
+{
+    this->requestMethod = inMethod;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

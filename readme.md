@@ -57,10 +57,10 @@ void buildResourceTree(server::resource* treeRoot)
     server::resource* rootBranchAction{treeRoot->addChild("actions", enums::resourceType::STATIC)};
 
     // build a new handler function    
-    httpHandler actionPostHandler{[](packet::httpRequest* request, packet::httpResponse* response){
+    httpHandler actionsPostHandler{[](packet::httpRequest* request, packet::httpResponse* response){
         std::string returnContent{"<!doctype html><html><head></head><body>"};
         returnContent.append("<h1>Hello World!</h1>");
-        returnContent.append("<h3>You've executed a POST request against /actions of 127.0.0.1</h3>");
+        returnContent.append("<h3>You've executed a POST request against /action of 127.0.0.1</h3>");
         returnContent.append("</body></html>");
         response->setContent(returnContent);
         response->addHeader("Content-Type", "text/html");
@@ -68,15 +68,15 @@ void buildResourceTree(server::resource* treeRoot)
     }};
 
     // add the handler function to the resource for a specific HTTP method
-    // in this case we're adding the handler for POST requests against the 'actions' resource
+    // in this case we're adding the handler for POST requests against the 'actions'
     // (ie http://127.0.0.1/actions )
-    rootBranchAction->addHandler(enums::httpMethod::POST, actionPostHandler);
+    rootBranchAction->addHandler(enums::httpMethod::POST, actionsPostHandler);
     
     // build a new handler function    
-    httpHandler actionPutHandler{[](packet::httpRequest* request, packet::httpResponse* response){
+    httpHandler actionsPutHandler{[](packet::httpRequest* request, packet::httpResponse* response){
         std::string returnContent{"<!doctype html><html><head></head><body>"};
         returnContent.append("<h1>Hello World!</h1>");
-        returnContent.append("<h3>You've executed a PUT request against /actions of 127.0.0.1</h3>");
+        returnContent.append("<h3>You've executed a PUT request against /action of 127.0.0.1</h3>");
         returnContent.append("</body></html>");
         response->setContent(returnContent);
         response->addHeader("Content-Type", "text/html");
@@ -84,9 +84,9 @@ void buildResourceTree(server::resource* treeRoot)
     }};
     
     // add the handler function to the resource for a specific HTTP method
-    // in this case we're adding the handler for PUT requests against the 'actions' resource
+    // in this case we're adding the handler for PUT requests against the 'actions'
     // (ie http://127.0.0.1/actions )
-    rootBranchAction->addHandler(enums::httpMethod::PUT, actionPutHandler);
+    rootBranchAction->addHandler(enums::httpMethod::PUT, actionsPutHandler);
 
     // at this point the server will respond to GET requests at /
     // the server will also respond to POST and PUT requests at /actions
@@ -104,14 +104,25 @@ int main(int argc, char* argv[])
     // Set the IP address to which to bind the listen socket
     httpServer->setBindAddress("127.0.0.1");
     // Set the Port to which to bind the listen socket
-    httpServer->setBindPort(8080);
+    httpServer->setBindPort(8443);
     // Set the size of the TCP listen queue
     httpServer->setListenQueue(5);
+    
+    // Set flag to use ssl encryption
+    httpServer->setUseSSL(true);
+    // Provide full path to private key file
+    // start() validates it can open file
+    httpServer->setSSLPrivateKey("/var/frederick2/ssl/serverkey.pem");
+    // Provide full path to public cert file
+    // start() validates it can open file
+    httpServer->setSSLPublicCert("/var/frederick2/ssl/servercert.pem");
+    
     // Start the server
     if(!httpServer->start())
     {
         std::cout << "Could not start frederick2." << std::endl;
         std::cout << "Make sure Address, Port, and ListenQueue are set before calling start()" << std::endl;
+        std::cout << "If SSL, set valid paths to PEM formatted Key and Cert before calling start()" << std::endl;
     }
 
     // Do something else till whenever

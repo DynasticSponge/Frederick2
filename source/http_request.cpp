@@ -94,7 +94,7 @@ void packet::httpRequest::addPathParameter(const std::string& pName, const std::
 // frederick2::httpPacket::httpRequest::buildRequest
 ///////////////////////////////////////////////////////////////////////////////
 
-void packet::httpRequest::buildRequest()
+bool packet::httpRequest::buildRequest()
 {
     std::unique_ptr<packet::headerParser> headerParser{new packet::headerParser(this->buffer)};
     
@@ -145,7 +145,7 @@ void packet::httpRequest::buildRequest()
     ///////////////////////////////////////////////////////////////////////////////
     
     this->buffer = nullptr;
-    return;   
+    return(true);   
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -345,6 +345,16 @@ frederick2::httpServer::uri packet::httpRequest::getURI()
 bool packet::httpRequest::getHasContent()
 {
     return(this->hasContent);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// frederick2::httpPacket::httpRequest::setMethod
+///////////////////////////////////////////////////////////////////////////////
+
+void packet::httpRequest::setMethod(enums::httpMethod inMethod)
+{
+    this->method = inMethod;
+    return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

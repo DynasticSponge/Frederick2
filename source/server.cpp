@@ -13,6 +13,9 @@
 #include <functional>
 #include <future>
 #include <memory>
+#include <openssl/bio.h>
+#include <openssl/err.h>
+#include <openssl/ssl.h>
 #include <string>
 
 #include "../headers/frederick2_namespace.hpp"
@@ -53,11 +56,27 @@ server::httpServer::httpServer()
     this->hasBindAddr = false;
     this->hasBindPort = false;
     this->hasListenQueue = false;
+    this->hasSSLCert = false;
+    this->hasSSLKey = false;
+    this->useSSL = false;
+    this->runningWithSSL = false;
     this->bindPort = -1;
     this->connectionTimeout = 30;
     this->listenQueue = -1;
     this->rootResource = new server::resource("RESOURCE_ROOT", enums::resourceType::STATIC);
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// frederick2::httpServer::httpServer::destroyOpenSSL
+///////////////////////////////////////////////////////////////////////////////
+
+void server::httpServer::destroyOpenSSL()
+{
+    ERR_free_strings();
+    EVP_cleanup();
+    return;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // frederick2::httpServer::httpServer::getResourceTree
@@ -118,7 +137,14 @@ packet::httpResponse *server::httpServer::handleRequest(packet::httpRequest *inb
     // identify and call appropriate handler
     if(!errorResponse)
     {
-        handlerCheck resourceHandler{targetResource->getHandler(inbound->getMethod())};
+        enums::httpMethod reqMethod{inbound->getMethod()};
+        outbound->setRequestMethod(reqMethod);
+        if(reqMethod == enums::httpMethod::HEAD)
+        {
+            inbound->setMethod(enums::httpMethod::GET);
+            reqMethod = enums::httpMethod::GET;
+        }
+        handlerCheck resourceHandler{targetResource->getHandler(reqMethod)};
         if(resourceHandler.first){
             resourceHandler.second(inbound, outbound);
         }
@@ -142,6 +168,18 @@ packet::httpResponse *server::httpServer::handleRequest(packet::httpRequest *inb
     outbound->addHeader("Connection", connHeaderValue);
     
     return(outbound);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// frederick2::httpServer::httpServer::initializeOpenSSL
+///////////////////////////////////////////////////////////////////////////////
+
+void server::httpServer::initializeOpenSSL()
+{
+    SSL_load_error_strings();
+    SSL_library_init();
+    OpenSSL_add_all_algorithms();
+    return;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -217,6 +255,12 @@ bool server::httpServer::runServer(std::future<void> exitSignal)
         {
             server::connection *newConn{new server::connection(this)};
             newConn->setMaxTime(this->connectionTimeout);
+            if(this->runningWithSSL){
+                newConn->setUseSSL(true);
+                newConn->setSSLContext(this->sslContext);
+                newConn->setSSLPrivateKey(this->sslKeyPath);
+                newConn->setSSLPublicCert(this->sslCertPath);
+            }
             if(newConn->acceptConnection(listenSock->getFD()))
             {
                 auto funcPtr = &server::connection::handleConnection;
@@ -252,7 +296,9 @@ bool server::httpServer::runServer(std::future<void> exitSignal)
         }
     }
 
+    listenSock->shutdown(true,true);
     listenSock->close();
+    
     return(true);
 }
 
@@ -300,6 +346,38 @@ void server::httpServer::setConnectionTimeout(size_t timeout)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// frederick2::httpServer::httpServer::setSSLPrivateKey
+///////////////////////////////////////////////////////////////////////////////
+
+void server::httpServer::setSSLPrivateKey(const std::string& keyPath)
+{
+    this->sslKeyPath = keyPath;
+    this->hasSSLKey = true;
+    return;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// frederick2::httpServer::httpServer::setSSLPublicCert
+///////////////////////////////////////////////////////////////////////////////
+
+void server::httpServer::setSSLPublicCert(const std::string& certPath)
+{
+    this->sslCertPath = certPath;
+    this->hasSSLCert = true;
+    return;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// frederick2::httpServer::httpServer::setUseSSL
+///////////////////////////////////////////////////////////////////////////////
+
+void server::httpServer::setUseSSL(bool sslFlag)
+{
+    this->useSSL = sslFlag;
+    return;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // frederick2::httpServer::httpServer::start
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -308,10 +386,43 @@ bool server::httpServer::start()
     bool safeStart{this->hasBindAddr};
     safeStart &= this->hasBindPort;
     safeStart &= this->hasListenQueue;
-    if(!safeStart){
+    if(!safeStart)
+    {
         return(safeStart);
     }
+    
+    if(this->useSSL)
+    {
+        bool safeSSL{this->hasSSLKey};
+        safeSSL &= this->hasSSLCert;
+        if(!safeSSL)
+        {
+            return(safeSSL);
+        }
+
+        this->initializeOpenSSL();
+        this->sslContext = SSL_CTX_new(TLS_method());
+        long sslOptions{SSL_OP_SINGLE_DH_USE};
+        sslOptions |= SSL_OP_NO_SSLv3;
+        sslOptions |= SSL_OP_NO_TLSv1;
+        sslOptions |= SSL_OP_NO_TLSv1_1;
+        SSL_CTX_set_options(this->sslContext, sslOptions);
+        int sslError{0};
+        sslError = SSL_CTX_use_certificate_file(this->sslContext, this->sslCertPath.c_str(), SSL_FILETYPE_PEM);
+        if(sslError < 1)
+        {
+            return(false);
+        }    
+        sslError = SSL_CTX_use_PrivateKey_file(this->sslContext, this->sslKeyPath.c_str(), SSL_FILETYPE_PEM);
+        if(sslError < 1)
+        {
+            return(false);
+        }
+    }
+
     this->didAsyncStart = safeStart;
+    this->runningWithSSL = this->useSSL;
+    
     auto funcPtr = &server::httpServer::runServer;
     std::future<void> futureExit{this->killRunServer.get_future()};
     this->catchRunServer = std::async(std::launch::async, funcPtr, this, std::move(futureExit));
@@ -333,6 +444,10 @@ void server::httpServer::stop()
             throw std::runtime_error("wtf: httpServer::runServer returned false");
         }
     }
+    if(this->runningWithSSL){
+        this->destroyOpenSSL();
+    } 
+    this->runningWithSSL = false;
     this->didAsyncStart = false;
 }
 

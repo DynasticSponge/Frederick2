@@ -8,7 +8,7 @@ STATICDIR = ${STARTDIR}libraries/
 OBJECTS = $(wildcard ${OBJECTDIR}*.o)
 SOURCES = $(wildcard ${SOURCEDIR}*.cpp)
 STATICS = $(wildcard ${STATICSDIR}*.a)
-LIBRARIES = -lpthread
+LIBRARIES = -lpthread -lssl -lcrypto
 
 compile: ${SOURCES}
 	$(CXX) -std=c++17 -c ${SOURCES} -I ${HEADERDIR}

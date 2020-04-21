@@ -51,9 +51,10 @@ private:
     void addFileSegment(const std::string&);
     void addHeader(const std::string&, const std::string&);
     void addPathParameter(const std::string&, const std::string&);
-    void buildRequest();
+    bool buildRequest();
     frederick2::httpEnums::httpStatus collectRequestBody();
     frederick2::httpServer::uri getURI();
+    void setMethod(frederick2::httpEnums::httpMethod);
     frederick2::httpEnums::httpStatus validateRequest();
     ///////////////////////////////////////////////////////////////////////////////
     // Private Properties
