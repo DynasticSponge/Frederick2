@@ -31,8 +31,8 @@ private:
     ///////////////////////////////////////////////////////////////////////////////
     // Private Functions
     ///////////////////////////////////////////////////////////////////////////////
-    socket(const std::string&, const std::string&);
-    socket(int);
+    explicit socket(const std::string&, const std::string&);
+    explicit socket(int);
     void close();
     int getFD();
     bool listen(int);

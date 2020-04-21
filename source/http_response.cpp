@@ -45,6 +45,7 @@ packet::httpResponse::httpResponse()
     this->hasContent = false;
     this->contentChunked = false;
     this->protocol = enums::httpProtocol::HTTP;
+    this->requestMethod = enums::httpMethod::GET;
     this->status = enums::httpStatus::OK;
 }
 
