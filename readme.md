@@ -151,5 +151,5 @@ Thanks!
 [MIT](https://choosealicense.com/licenses/mit/)
 
 ## Project Namesake(s)
--  Learn about: [Frederick II - Holy Roman Emperor](https://en.wikipedia.org/wiki/Frederick_II,_Holy_Roman_Emperor)
--  Learn about: [Frederick II - Prussia](https://en.wikipedia.org/wiki/Frederick_the_Great)
+-   Learn about: [Frederick II - Holy Roman Emperor](https://en.wikipedia.org/wiki/Frederick_II,_Holy_Roman_Emperor)
+-   Learn about: [Frederick II - Prussia](https://en.wikipedia.org/wiki/Frederick_the_Great)
