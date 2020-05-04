@@ -248,7 +248,7 @@ bool server::httpServer::runServer(std::future<void> exitSignal)
     ///////////////////////////////////////////////////////////////////////////////
     // Continuously accept new connections
     ///////////////////////////////////////////////////////////////////////////////
-    auto signalStatus = exitSignal.wait_for(std::chrono::milliseconds(0));
+    auto signalStatus{exitSignal.wait_for(std::chrono::milliseconds(0))};
     while(signalStatus != std::future_status::ready)
     {
         if(listenSock->pollIn())
@@ -423,7 +423,7 @@ bool server::httpServer::start()
     this->didAsyncStart = safeStart;
     this->runningWithSSL = this->useSSL;
     
-    auto funcPtr = &server::httpServer::runServer;
+    auto funcPtr{&server::httpServer::runServer};
     std::future<void> futureExit{this->killRunServer.get_future()};
     this->catchRunServer = std::async(std::launch::async, funcPtr, this, std::move(futureExit));
     return(safeStart);

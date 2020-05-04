@@ -117,16 +117,16 @@ bool server::connection::handleConnection(std::future<void> exitSignal)
     auto curTime{std::chrono::steady_clock::now()};
     bool clockRunning{false};
     size_t maxTimeMills{this->maxTime * 1000};
-    auto signalStatus = exitSignal.wait_for(std::chrono::milliseconds(0));    
+    auto signalStatus{exitSignal.wait_for(std::chrono::milliseconds(0))};    
     while(signalStatus != std::future_status::ready && !this->connectionError)
     {
         if(this->sock->pollIn())
         {   
             clockRunning = false;
             packet::httpRequest *request{new packet::httpRequest(&this->receiveBuffer)};
-            auto buildFuncPtr = &packet::httpRequest::buildRequest;
+            auto buildFuncPtr{&packet::httpRequest::buildRequest};
             std::future<bool> buildFuture{std::async(std::launch::async, buildFuncPtr, request)};
-            auto buildStatus = buildFuture.wait_for(std::chrono::milliseconds(0));    
+            auto buildStatus{buildFuture.wait_for(std::chrono::milliseconds(0))};    
             while(buildStatus != std::future_status::ready && !this->connectionError)
             {
                 if(this->sslActive)
@@ -263,8 +263,8 @@ void server::connection::readDataSSL()
 
 void server::connection::sendData(std::string sendBuffer)
 {
-    char *outCStr = (char*)sendBuffer.c_str();
-    size_t outCStrLen = sendBuffer.size();
+    char *outCStr{(char*)sendBuffer.c_str()};
+    size_t outCStrLen{sendBuffer.size()};
 
     while (outCStrLen > 0)
     {

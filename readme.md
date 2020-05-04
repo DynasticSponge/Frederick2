@@ -122,7 +122,7 @@ int main(int argc, char* argv[])
     {
         std::cout << "Could not start frederick2." << std::endl;
         std::cout << "Make sure Address, Port, and ListenQueue are set before calling start()" << std::endl;
-        std::cout << "If SSL, set valid paths to PEM formatted Key and Cert before calling start()" << std::endl;
+        std::cout << "If SSL, set paths to PEM formatted Key and Cert before calling start()" << std::endl;
     }
 
     // Do something else till whenever
@@ -149,3 +149,7 @@ Thanks!
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
+
+## Project Namesake(s)
+Learn about: [Fredering II - Holy Roman Emperor](https://en.wikipedia.org/wiki/Frederick_II,_Holy_Roman_Emperor)
+Learn about: [Frederick II - Prussia](https://en.wikipedia.org/wiki/Frederick_the_Great)
